@@ -307,7 +307,7 @@ func TestRunLsTable(t *testing.T) {
 	i1 := indexOf(t, out, "3c673a")
 	i2 := indexOf(t, out, "abc123")
 	i3 := indexOf(t, out, "4ca1b2")
-	if !(i1 < i2 && i2 < i3) {
+	if i1 >= i2 || i2 >= i3 {
 		t.Errorf("rows out of order: %d, %d, %d\n%s", i1, i2, i3, out)
 	}
 }

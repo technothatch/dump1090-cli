@@ -59,7 +59,7 @@ func (c *Client) BaseURL() string {
 // error page from a reverse proxy can never be mistaken for decoder data.
 func (c *Client) FetchAircraft(ctx context.Context) (Doc, error) {
 	var doc Doc
-	if _, _, err := c.getJSONAny(ctx, AircraftPaths, looksLikeAircraftDoc, &doc); err != nil {
+	if _, err := c.getJSONAny(ctx, AircraftPaths, looksLikeAircraftDoc, &doc); err != nil {
 		return Doc{}, err
 	}
 	return doc, nil
@@ -69,7 +69,7 @@ func (c *Client) FetchAircraft(ctx context.Context) (Doc, error) {
 // distance fallbacks, so callers treat an error as "position unknown".
 func (c *Client) FetchReceiver(ctx context.Context) (Receiver, error) {
 	var recv Receiver
-	if _, _, err := c.getJSONAny(ctx, ReceiverPaths, looksLikeJSONObject, &recv); err != nil {
+	if _, err := c.getJSONAny(ctx, ReceiverPaths, looksLikeJSONObject, &recv); err != nil {
 		return Receiver{}, err
 	}
 	return recv, nil
@@ -87,7 +87,7 @@ type StatsDoc struct {
 // FetchStats retrieves stats.json, keeping the original bytes for --json.
 func (c *Client) FetchStats(ctx context.Context) (StatsDoc, error) {
 	var sd StatsDoc
-	_, raw, err := c.getJSONAny(ctx, StatsPaths, looksLikeJSONObject, &sd.Stats)
+	raw, err := c.getJSONAny(ctx, StatsPaths, looksLikeJSONObject, &sd.Stats)
 	if err != nil {
 		return StatsDoc{}, err
 	}
@@ -96,16 +96,16 @@ func (c *Client) FetchStats(ctx context.Context) (StatsDoc, error) {
 }
 
 // getJSONAny tries each path in order and decodes the first response that
-// is HTTP 200, passes validate and unmarshals into v. It returns the path
-// that won and the raw body it decoded. Transport errors abort immediately:
-// if the host is down, the other paths on the same host are down too.
-func (c *Client) getJSONAny(ctx context.Context, paths []string, validate func([]byte) bool, v any) (string, []byte, error) {
+// is HTTP 200, passes validate and unmarshals into v. It returns the raw
+// body it decoded. Transport errors abort immediately: if the host is down,
+// the other paths on the same host are down too.
+func (c *Client) getJSONAny(ctx context.Context, paths []string, validate func([]byte) bool, v any) ([]byte, error) {
 	var attempts []string
 	for _, p := range paths {
 		url := c.baseURL + p
 		body, status, err := c.get(ctx, url)
 		if err != nil {
-			return "", nil, err
+			return nil, err
 		}
 		if status != http.StatusOK {
 			attempts = append(attempts, fmt.Sprintf("%s: %s", url, statusText(status)))
@@ -119,9 +119,9 @@ func (c *Client) getJSONAny(ctx context.Context, paths []string, validate func([
 			attempts = append(attempts, fmt.Sprintf("%s: decode: %v", url, err))
 			continue
 		}
-		return p, body, nil
+		return body, nil
 	}
-	return "", nil, fmt.Errorf("dump1090: no usable response (tried %s)", strings.Join(attempts, "; "))
+	return nil, fmt.Errorf("dump1090: no usable response (tried %s)", strings.Join(attempts, "; "))
 }
 
 // get fetches url and returns the body plus the HTTP status. Non-200
